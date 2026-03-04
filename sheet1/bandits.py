@@ -5,26 +5,12 @@ Stochastic bandits: Gaussian and Bernoulli arms.
 Features
 - Distribution: "gaussian" or "bernoulli"
 - Means: set manually or generated randomly
-  - Gaussian random means: i.i.d. N(0, 1)
-  - Bernoulli random means: i.i.d. Uniform(0, 1)
+  - Gaussian random means: iid N(0, 1)
+  - Bernoulli random means: iid Uniform(0, 1)
 - Optional "gap mode":
   After sampling initial random means, fix the best mean mu* and replace the
-  other means (in descending order) by mu* - kΔ (k=1,2,...). For Bernoulli,
+  other means in descending order by mu* - kΔ (k=1,2,...). For Bernoulli,
   clamp negative means to 0.
-
-Usage examples
---------------
-# 1) Gaussian with manual means
-b = StochasticBandit(n_arms=3, dist="gaussian", means=[0.0, 0.2, -0.5], seed=0)
-r = b.pull(1)
-
-# 2) Bernoulli with random means
-b = StochasticBandit(n_arms=5, dist="bernoulli", means=None, seed=123)
-print(b.means)
-
-# 3) Gaussian random + gap mode Δ=0.1
-b = StochasticBandit(n_arms=5, dist="gaussian", means=None, gap=0.1, seed=7)
-print(b.means)  # best stays, others become μ* - k*Δ in descending rank order
 """
 
 from __future__ import annotations
@@ -202,7 +188,19 @@ class StochasticBandit:
 
 
 if __name__ == "__main__":
-    # Minimal smoke test
+    """
+    Gaussian with manual means
+    b = StochasticBandit(n_arms=3, dist="gaussian", means=[0.0, 0.2, -0.5], seed=0)
+    r = b.pull(1)
+
+    Bernoulli with random means
+    b = StochasticBandit(n_arms=5, dist="bernoulli", means=None, seed=123)
+    print(b.means)
+
+    Gaussian + gap mode gap=0.1
+    b = StochasticBandit(n_arms=5, dist="gaussian", means=None, gap=0.1, seed=7)
+    print(b.means)  # best stays, others become mu* - k*gap in descending rank order
+    """
     b1 = StochasticBandit(n_arms=3, dist="gaussian", means=[0.0, 0.2, -0.5], seed=0)
     print("b1 means:", b1.means_list, "pull arm 1:", b1.pull(1))
 
