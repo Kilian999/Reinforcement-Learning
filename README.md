@@ -18,6 +18,8 @@ pip install -r requirements.txt
 
 # Execution
 
+The relevant code is placed in sheet3, the other folders are not relevant for the current programming exercise
+
 python -m sheet3.simulation for simulation a
 
 python -m sheet3.simulation_metric for simulation with metrics
