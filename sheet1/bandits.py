@@ -1,4 +1,3 @@
-# bandits.py
 """
 Stochastic bandits: Gaussian and Bernoulli arms.
 
@@ -14,23 +13,31 @@ Features
 """
 
 from __future__ import annotations
+# Ohne annotations: Class -> echtes Objekt
+# Mit annotations: "Class" -> String
 
 from dataclasses import dataclass
+# Benannte Komponenten der Klasse (Tupel mit benannten Variablen)
 from typing import Iterable, List, Optional, Sequence, Union
 
 import numpy as np
 
 
 Number = Union[int, float]
+# Number elem {int,float}
 
-
+"""
+Validation of the input distribution
+"""
 def _validate_dist(dist: str) -> str:
     d = dist.strip().lower()
     if d not in {"gaussian", "bernoulli"}:
         raise ValueError(f"dist must be 'gaussian' or 'bernoulli', got: {dist!r}")
     return d
 
-
+"""
+Check size of means and n_arms, convert means into list of floats
+"""
 def _as_means_list(means: Optional[Sequence[Number]], n_arms: int) -> Optional[List[float]]:
     if means is None:
         return None
@@ -38,7 +45,9 @@ def _as_means_list(means: Optional[Sequence[Number]], n_arms: int) -> Optional[L
         raise ValueError(f"means must have length n_arms={n_arms}, got {len(means)}")
     return [float(m) for m in means]
 
-
+"""
+Clamp x onto [0,1] fpr benoulli
+"""
 def _clamp01(x: np.ndarray) -> np.ndarray:
     return np.clip(x, 0.0, 1.0)
 
@@ -48,8 +57,6 @@ class StochasticBandit:
     """
     A stochastic multi-armed bandit with independent arms.
 
-    Parameters
-    ----------
     n_arms : int
         Number of arms.
     dist : str
@@ -57,7 +64,7 @@ class StochasticBandit:
     means : Optional[Sequence[Number]]
         If provided, used as arm means. If None, means are sampled randomly.
     gap : Optional[float]
-        If provided (Δ > 0), activate gap mode described in the task statement.
+        If provided (gap > 0), activate gap mode described in the task statement.
         Gap mode is only applied when means are generated randomly (means=None).
     sigma : float
         Standard deviation for Gaussian rewards (same for all arms).
@@ -69,7 +76,7 @@ class StochasticBandit:
     pull(arm) -> float
         Draw a reward from the chosen arm.
     reset(seed=None) -> None
-        Reset RNG (and optionally resample means if they were random initially).
+        Reset RNG.
     """
 
     n_arms: int
@@ -94,24 +101,26 @@ class StochasticBandit:
 
         means_list = _as_means_list(self.means, self.n_arms)
 
+        # Sample if no means are given, apply gap mode
         if means_list is None:
             self._means = self._sample_random_means()
             if self.gap is not None:
                 self._apply_gap_mode(float(self.gap))
+        # Means given by means_list, clamp fpr Bernoulli
         else:
             self._means = np.array(means_list, dtype=float)
-            # Ensure valid probabilities for Bernoulli if user passes manual means.
             if self.dist == "bernoulli":
                 self._means = _clamp01(self._means)
 
     @property
+    # Function can be reas as an attribute
     def means_array(self) -> np.ndarray:
         """Return a copy of current means as a numpy array."""
         return self._means.copy()
 
     @property
     def means_list(self) -> List[float]:
-        """Return current means as a Python list."""
+        """Return current means as list."""
         return self._means.tolist()
 
     def _sample_random_means(self) -> np.ndarray:
