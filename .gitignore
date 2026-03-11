@@ -1,0 +1,15 @@
+# Virtuelle Umgebung
+venv/
+.venv/
+env/
+
+# Python Cache
+__pycache__/
+*.pyc
+
+# IDE Einstellungen
+.vscode/
+
+# Betriebssystem-spezifisches
+.DS_Store
+Thumbs.db
