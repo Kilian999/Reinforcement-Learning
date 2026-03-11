@@ -5,7 +5,7 @@ from typing import Callable, Literal, Optional, Tuple
 
 import numpy as np
 
-from utilities import require_bandit, safe_argmax, softmax
+from .utilities import require_bandit, safe_argmax, softmax
 
 
 TauSchedule = Callable[[int], float]

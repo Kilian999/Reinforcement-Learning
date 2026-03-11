@@ -5,7 +5,7 @@ from typing import Optional, Tuple
 
 import numpy as np
 
-from utilities import require_bandit, safe_argmax
+from .utilities import require_bandit, safe_argmax
 
 
 @dataclass
