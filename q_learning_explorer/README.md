@@ -49,7 +49,7 @@ Liefert die exakt optimale Policy als Vergleich — kein Sampling nötig, aber s
 | **Greedy** | Immer `argmax Q(s,a)` — keine Exploration, bleibt bei erster Lösung |
 | **ε-Greedy** | Mit Prob. ε zufällig, sonst greedy — Standardstrategie |
 | **ε-Greedy Decay** | ε sinkt nach jeder Episode: `ε ← max(ε_min, ε · decay)` |
-| **Softmax** | `P(a|s) ∝ exp(Q(s,a)/τ)` — τ steuert Schärfe: τ→0 wie Greedy, τ→∞ wie Random|
+| **Softmax** | `P(a\|s) ∝ exp(Q(s,a)/τ)` — τ steuert Schärfe: τ→0 wie Greedy, τ→∞ wie Random |
 | **UCB** | `argmax [Q(s,a) + c·√(ln t / n(s,a))]` — systematische Exploration |
 | **Behaviour Policy** | Off-Policy: Daten mit gemischter Policy, lernt greedy Target |
 
