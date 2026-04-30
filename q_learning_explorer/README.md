@@ -49,7 +49,7 @@ Liefert die exakt optimale Policy als Vergleich — kein Sampling nötig, aber s
 | **Greedy** | Immer `argmax Q(s,a)` — keine Exploration, bleibt bei erster Lösung |
 | **ε-Greedy** | Mit Prob. ε zufällig, sonst greedy — Standardstrategie |
 | **ε-Greedy Decay** | ε sinkt nach jeder Episode: `ε ← max(ε_min, ε · decay)` |
-| **Softmax** | `P(a|s) ∝ exp(Q(s,a)/τ)` — Temperatur τ steuert Schärfe |
+| **Softmax** | `P(a|s) ∝ exp(Q(s,a)/τ)` — Temperatur τ steuert Schärfe: τ→0 wie Greedy, τ→∞ wie Random; Exploration skaliert relativ zu Q-Wert-Unterschieden statt absolut |
 | **UCB** | `argmax [Q(s,a) + c·√(ln t / n(s,a))]` — systematische Exploration |
 | **Behaviour Policy** | Off-Policy: Daten mit gemischter Policy, lernt greedy Target |
 
@@ -76,12 +76,3 @@ Liefert die exakt optimale Policy als Vergleich — kein Sampling nötig, aber s
 - **Besuchshäufigkeit:** Wie oft jeder Zustand besucht wurde
 - **Optimale Policy:** Nur der beste Pfeil pro Zelle
 
----
-
-## Empfohlene Experimente
-
-**Fake-Ziel als Falle:** Fake-Reward auf +8 setzen — beobachten ob der Agent das suboptimale Ziel akzeptiert oder mit genug Exploration das echte findet.
-
-**VI als Referenz:** Value Iteration ausführen, Policy notieren, Q-Werte resetten, Q-Learning starten — wie schnell konvergiert Q-Learning gegen die optimale VI-Policy?
-
-**UCB vs. ε-Greedy:** Beide auf derselben Karte vergleichen — UCB exploriert systematischer, auf großen Karten deutlich sichtbar.
