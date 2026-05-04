@@ -119,14 +119,15 @@ select:focus{border-color:var(--accent)}
   <div class="card">
     <div class="card-title">Karte bearbeiten</div>
     <div class="mode-strip" style="margin-bottom:8px">
-      <button class="mode-btn m-normal active" id="mode-empty" onclick="setEditMode('empty')">Normal</button>
+      <button class="mode-btn active" id="mode-inspect" onclick="setEditMode('inspect')" style="color:var(--accent2)">🔍 Inspect</button>
+      <button class="mode-btn m-normal" id="mode-empty" onclick="setEditMode('empty')">Normal</button>
       <button class="mode-btn m-ice" id="mode-ice" onclick="setEditMode('ice')">Eis</button>
       <button class="mode-btn m-wall" id="mode-wall" onclick="setEditMode('wall')">Wand</button>
       <button class="mode-btn m-bomb" id="mode-bomb" onclick="setEditMode('bomb')">Bombe</button>
       <button class="mode-btn m-goal" id="mode-goal" onclick="setEditMode('goal')">Ziel</button>
       <button class="mode-btn m-fake" id="mode-fake" onclick="setEditMode('fake')">Fake</button>
     </div>
-    <div style="font-size:9px;color:var(--ink3);margin-bottom:7px">Klicke oder ziehe auf Zellen</div>
+    <div style="font-size:9px;color:var(--ink3);margin-bottom:7px">Inspect: nur anschauen · Andere Modi: Zellen bearbeiten</div>
     <div class="btn-row">
       <button class="btn" onclick="resetMap()">Reset</button>
       <button class="btn" onclick="randomMap()">Zufällig</button>
@@ -184,6 +185,26 @@ select:focus{border-color:var(--accent)}
 <div class="col">
 
   <div class="card">
+    <div class="card-title">Demo-Szenarien</div>
+    <div style="font-size:9px;color:var(--ink3);margin-bottom:8px;line-height:1.5">Karte + Algorithmus + Parameter laden &mdash; zeigt den typischen Unterschied direkt.</div>
+    <div class="btn-row" style="flex-direction:column;gap:5px">
+      <button class="btn" onclick="loadScenario('sarsa')" style="text-align:left;padding:7px 10px">
+        <span style="font-weight:500;color:var(--accent)">SARSA vs Q-Learning &mdash; Cliff</span>
+        <span style="display:block;font-size:9px;color:var(--ink3);margin-top:2px">Bombenreihe am Pfad &middot; &epsilon;=0.35 &middot; SARSA weicht aus, Q-Learning geht nah ran</span>
+      </button>
+      <button class="btn" onclick="loadScenario('double_q')" style="text-align:left;padding:7px 10px">
+        <span style="font-weight:500;color:var(--accent)">Double Q &mdash; Bias-Vergleich</span>
+        <span style="display:block;font-size:9px;color:var(--ink3);margin-top:2px">Viele Fake-Ziele &middot; Q-Max-View &middot; Double Q unterschatzt Fake-Ziele weniger</span>
+      </button>
+      <button class="btn" onclick="loadScenario('q_learning')" style="text-align:left;padding:7px 10px">
+        <span style="font-weight:500;color:var(--accent)">Q-Learning &mdash; Baseline</span>
+        <span style="display:block;font-size:9px;color:var(--ink3);margin-top:2px">Standardkarte &middot; &epsilon;-Greedy &middot; Klassisches Off-Policy Lernen</span>
+      </button>
+    </div>
+    <div id="sc-hint" style="font-size:9px;color:var(--ink3);margin-top:8px;line-height:1.6;background:var(--accent-light);border-radius:var(--radius-sm);padding:6px 8px;border-left:2px solid var(--accent);display:none"></div>
+  </div>
+
+  <div class="card">
     <div class="card-title">Welt</div>
     <div class="grid-wrap">
       <canvas id="grid-canvas" width="360" height="360"></canvas>
@@ -192,12 +213,21 @@ select:focus{border-color:var(--accent)}
 
   <div class="card">
     <div class="card-title">Training</div>
-    <div class="btn-row" style="margin-bottom:8px">
+    <div class="btn-row" style="margin-bottom:6px">
       <button class="btn accent" id="run-btn" onclick="toggleRun()">▶ Start</button>
       <button class="btn" onclick="stepOnce()">1 Schritt</button>
       <button class="btn" onclick="runEpisode()">1 Episode</button>
       <button class="btn danger" onclick="resetQ()">Q Reset</button>
       <button class="btn vi" onclick="runVI()">Value Iter.</button>
+    </div>
+    <div class="btn-row" style="margin-bottom:8px;align-items:center;gap:5px">
+      <input id="n-ep-input" type="number" value="300" min="1" max="10000" step="10"
+        style="font-family:JetBrains Mono,monospace;font-size:11px;width:72px;padding:4px 6px;border:1px solid var(--paper3);border-radius:var(--radius-sm);background:var(--paper);color:var(--ink)">
+      <button class="btn" onclick="runNEpisodes()" style="flex:1">▶ N Episoden</button>
+      <div id="n-ep-progress" style="font-size:9px;color:var(--ink3);white-space:nowrap"></div>
+    </div>
+    <div style="font-size:9px;color:var(--ink3);margin-bottom:6px;display:flex;gap:6px;align-items:center">
+      Algorithmus: <span id="s-learner" style="color:var(--accent);font-weight:500">Q-Learning</span>
     </div>
     <div class="stat-grid">
       <div class="stat"><div class="s-label">EPISODEN</div><div class="s-val" id="s-ep">0</div></div>
@@ -237,6 +267,19 @@ select:focus{border-color:var(--accent)}
 
 <!-- RIGHT COLUMN -->
 <div class="col">
+
+  <div class="card">
+    <div class="card-title">Lernalgorithmus</div>
+    <select id="learner-sel" onchange="setLearner(this.value)">
+      <option value="q_learning" selected>Q-Learning (Off-Policy)</option>
+      <option value="sarsa">SARSA (On-Policy)</option>
+      <option value="double_q">Double Q-Learning</option>
+      <option value="sync_sarsa">Synchrones SARSA (Algo 20)</option>
+    </select>
+    <div class="algo-desc" id="learner-desc" style="margin-top:8px">
+      Off-Policy: Update mit max Q des Folge-Zustands – unabhängig von der gewählten Aktion.
+    </div>
+  </div>
 
   <div class="card">
     <div class="card-title">Explorations-Strategie</div>
@@ -287,13 +330,15 @@ const ACTIONS=[[-1,0],[1,0],[0,-1],[0,1]];
 const ANAMES=['↑','↓','←','→'];
 const EMPTY=0,WALL=1,ICE=2,BOMB=3,GOAL=4,FAKE=5;
 
-let map=[],Q={},visits={},ucbCounts={};
+let map=[],Q={},QA={},QB={},visits={},ucbCounts={};
 let agentR=0,agentC=0,startR=0,startC=0;
 let params={alpha:0.1,gamma:0.95,eps:0.3,decay:0.995,temp:1.0,ucbc:2.0,maxSteps:100,bFrac:0.5};
 let rewards={goal:10,fake:3,bomb:-10,step:-0.1,ice:-0.05};
-let strategy='eps_greedy',viewMode='q_max',editMode='empty';
+let strategy='eps_greedy',learner='q_learning',viewMode='q_max',editMode='inspect';
 let episodes=0,totalSteps=0,episodeSteps=0,episodeReward=0;
 let rewardHistory=[],lastEpRewards=[],running=false,stepsPerFrame=30;
+let sarsaNextAction=null;
+let fakeTerminal=true; // false in double_q scenario
 
 const canvas=document.getElementById('grid-canvas');
 const ctx=canvas.getContext('2d');
@@ -332,7 +377,7 @@ function initMap(){
 }
 
 function resetQ(){
-  Q={};visits={};ucbCounts={};
+  Q={};QA={};QB={};visits={};ucbCounts={};sarsaNextAction=null;
   episodes=0;totalSteps=0;episodeSteps=0;episodeReward=0;
   rewardHistory=[];lastEpRewards=[];
   agentR=startR;agentC=startC;
@@ -341,10 +386,14 @@ function resetQ(){
 
 function key(r,c){return r+','+c;}
 function qKey(r,c,a){return r+','+c+','+a;}
-function getQ(r,c,a){return Q[qKey(r,c,a)]||0;}
+function getQ(r,c,a){
+  if(learner==='double_q') return ((QA[qKey(r,c,a)]||0)+(QB[qKey(r,c,a)]||0))/2;
+  return Q[qKey(r,c,a)]||0;
+}
 function setQ(r,c,a,v){Q[qKey(r,c,a)]=v;}
 function maxQ(r,c){let m=-Infinity;for(let a=0;a<4;a++){let q=getQ(r,c,a);if(q>m)m=q;}return m===(-Infinity)?0:m;}
 function bestAction(r,c){let best=0,bv=-Infinity;for(let a=0;a<4;a++){let q=getQ(r,c,a);if(q>bv){bv=q;best=a;}}return best;}
+function bestActionFrom(tbl,r,c){let best=0,bv=-Infinity;for(let a=0;a<4;a++){let q=tbl[qKey(r,c,a)]||0;if(q>bv){bv=q;best=a;}}return best;}
 function isValid(r,c){return r>=0&&r<ROWS&&c>=0&&c<COLS&&map[r][c]!==WALL;}
 
 function step(r,c,a){
@@ -363,7 +412,7 @@ function step(r,c,a){
   let done=false;
   if(type===BOMB){reward=rewards.bomb;done=true;}
   else if(type===GOAL){reward=rewards.goal;done=true;}
-  else if(type===FAKE){reward=rewards.fake;done=true;}
+  else if(type===FAKE){reward=rewards.fake;done=fakeTerminal;}
   return{nr,nc,reward,done,type};
 }
 
@@ -399,15 +448,42 @@ function chooseAction(r,c){
 }
 
 function doStep(){
-  let a=chooseAction(agentR,agentC);
-  let {nr,nc,reward,done,type}=step(agentR,agentC,a);
-  let oldQ=getQ(agentR,agentC,a);
-  let nextMax=done?0:maxQ(nr,nc);
-  setQ(agentR,agentC,a,oldQ+params.alpha*(reward+params.gamma*nextMax-oldQ));
+  // For SARSA: reuse pre-chosen action if available
+  let a = (learner==='sarsa' && sarsaNextAction!==null) ? sarsaNextAction : chooseAction(agentR,agentC);
+  let {nr,nc,reward,done}=step(agentR,agentC,a);
+
+  if(learner==='q_learning'){
+    let oldQ=getQ(agentR,agentC,a);
+    let nextMax=done?0:maxQ(nr,nc);
+    setQ(agentR,agentC,a,oldQ+params.alpha*(reward+params.gamma*nextMax-oldQ));
+
+  } else if(learner==='sarsa'){
+    let nextA=done?0:chooseAction(nr,nc);
+    let oldQ=getQ(agentR,agentC,a);
+    let nextQ=done?0:getQ(nr,nc,nextA);
+    setQ(agentR,agentC,a,oldQ+params.alpha*(reward+params.gamma*nextQ-oldQ));
+    sarsaNextAction=done?null:nextA;
+
+  } else if(learner==='double_q'){
+    // Randomly update QA or QB; use opposite table to evaluate
+    if(Math.random()<0.5){
+      let oldQ=QA[qKey(agentR,agentC,a)]||0;
+      let bestA=done?0:bestActionFrom(QA,nr,nc);
+      let nextQ=done?0:(QB[qKey(nr,nc,bestA)]||0);
+      QA[qKey(agentR,agentC,a)]=oldQ+params.alpha*(reward+params.gamma*nextQ-oldQ);
+    } else {
+      let oldQ=QB[qKey(agentR,agentC,a)]||0;
+      let bestA=done?0:bestActionFrom(QB,nr,nc);
+      let nextQ=done?0:(QA[qKey(nr,nc,bestA)]||0);
+      QB[qKey(agentR,agentC,a)]=oldQ+params.alpha*(reward+params.gamma*nextQ-oldQ);
+    }
+  }
+
   if(strategy==='ucb'){let ck=qKey(agentR,agentC,a);ucbCounts[ck]=(ucbCounts[ck]||0)+1;}
   agentR=nr;agentC=nc;
   episodeReward+=reward;episodeSteps++;totalSteps++;
   if(done||episodeSteps>=params.maxSteps){
+    sarsaNextAction=null;
     if(strategy==='eps_greedy_decay') params.eps=Math.max(0.01,params.eps*params.decay);
     lastEpRewards.push(episodeReward);
     if(lastEpRewards.length>50) lastEpRewards.shift();
@@ -429,6 +505,7 @@ function updateStats(){
   let avg=lastEpRewards.length?lastEpRewards.reduce((a,b)=>a+b,0)/lastEpRewards.length:0;
   document.getElementById('s-avg').textContent=avg.toFixed(1);
   document.getElementById('ep-fill').style.width=Math.min(100,episodeSteps/params.maxSteps*100)+'%';
+  document.getElementById('s-learner').textContent=LEARNER_NAMES[learner]||learner;
 }
 
 function draw(){
@@ -578,27 +655,106 @@ function toggleRun(){
 
 function loop(){
   if(!running) return;
-  for(let i=0;i<stepsPerFrame;i++) doStep();
-  updateStats();draw();
-  if(totalSteps%150===0) drawChart();
-  requestAnimationFrame(loop);
+  if(learner==='sync_sarsa'){
+    doSyncSarsaSweep();
+    updateStats();draw();drawChart();
+    requestAnimationFrame(loop);
+  } else {
+    for(let i=0;i<stepsPerFrame;i++) doStep();
+    updateStats();draw();
+    if(totalSteps%150===0) drawChart();
+    requestAnimationFrame(loop);
+  }
 }
 
-function stepOnce(){if(running){running=false;document.getElementById('run-btn').textContent='▶ Start';document.getElementById('run-btn').className='btn accent';}doStep();updateStats();draw();}
+function stepOnce(){if(running){running=false;document.getElementById('run-btn').textContent='▶ Start';document.getElementById('run-btn').className='btn accent';}if(learner==='sync_sarsa'){doSyncSarsaSweep();drawChart();}else{doStep();}updateStats();draw();}
 function runEpisode(){
   if(running){running=false;document.getElementById('run-btn').textContent='▶ Start';document.getElementById('run-btn').className='btn accent';}
   let s=episodes;while(episodes===s)doStep();
   updateStats();draw();drawChart();
 }
 
+function runNEpisodes(){
+  let raw=document.getElementById('n-ep-input').value.trim();
+  if(raw===''){
+    // No number → just start continuous run
+    toggleRun();
+    document.getElementById('n-ep-progress').textContent='';
+    return;
+  }
+  if(running){running=false;document.getElementById('run-btn').textContent='▶ Start';document.getElementById('run-btn').className='btn accent';}
+  let n=parseInt(raw);
+  if(!n||n<1) return;
+  let target=episodes+n;
+  let prog=document.getElementById('n-ep-progress');
+  prog.textContent='0 / '+n;
+  let batchSize=50;
+  function runBatch(){
+    for(let i=0;i<batchSize&&episodes<target;i++){
+      if(learner==='sync_sarsa') doSyncSarsaSweep(); else doStep();
+    }
+    let soFar=Math.min(episodes,target)-(target-n);
+    prog.textContent=soFar+' / '+n;
+    updateStats();draw();
+    if(episodes<target) requestAnimationFrame(runBatch);
+    else{drawChart();prog.textContent='✓ '+n+' fertig';}
+  }
+  requestAnimationFrame(runBatch);
+}
+
+const LEARNER_DESCS={
+  q_learning:'Off-Policy: Update mit max Q des Folge-Zustands – unabhängig von der gewählten Aktion.',
+  sarsa:'On-Policy: Update mit dem Q-Wert der tatsächlich gewählten Folge-Aktion (S,A,R,S′,A′).',
+  double_q:'Zwei Q-Tabellen (QA, QB). Selektion und Bewertung getrennt → weniger Maximierungs-Bias.',
+  sync_sarsa:'Synchroner Sweep: In jedem "Schritt" werden ALLE (s,a)-Paare gleichzeitig mit der aktuellen Policy geupdated (Algo 20). Konvergiert zu Q^π der aktuellen Policy.'
+};
+const LEARNER_NAMES={q_learning:'Q-Learning',sarsa:'SARSA',double_q:'Double Q',sync_sarsa:'Sync SARSA'};
+
+function setLearner(l){
+  learner=l;
+  document.getElementById('learner-desc').textContent=LEARNER_DESCS[l];
+  document.getElementById('s-learner').textContent=LEARNER_NAMES[l];
+  resetQ();
+  log('Algorithmus gewechselt → '+LEARNER_NAMES[l],'');
+}
 function setStrategy(s){strategy=s;document.getElementById('algo-desc').textContent=DESCS[s];}
+
+function doSyncSarsaSweep(){
+  // Synchronous SARSA (Algorithm 20):
+  // For every non-terminal (s,a), compute the expected Q update under the current policy
+  // using the known transition function (we have full model access in the gridworld).
+  // All updates are computed from Q_old, then applied simultaneously.
+  let updates={};
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+    let cell=map[r][c];
+    if(cell===WALL||cell===BOMB||cell===GOAL||(cell===FAKE&&fakeTerminal)) continue;
+    for(let a=0;a<4;a++){
+      let {nr,nc,reward,done}=step(r,c,a);
+      // Next action under current policy (ε-greedy on current Q)
+      let a2=bestAction(nr,nc);
+      let nextQ=done?0:getQ(nr,nc,a2);
+      let oldQ=getQ(r,c,a);
+      updates[qKey(r,c,a)]=oldQ+params.alpha*(reward+params.gamma*nextQ-oldQ);
+    }
+  }
+  // Apply all updates simultaneously (synchronous)
+  for(let k in updates) Q[k]=updates[k];
+  // Count as one "episode" for stats/chart purposes
+  episodeReward=0; episodeSteps=0;
+  episodes++; totalSteps+=ROWS*COLS*4;
+  rewardHistory.push(0); lastEpRewards.push(0);
+  if(lastEpRewards.length>50) lastEpRewards.shift();
+  if(episodes%20===0) log('Sync SARSA Sweep '+episodes,'');
+}
 function setView(v){viewMode=v;draw();}
 
 function setEditMode(m){
   editMode=m;
-  ['empty','ice','wall','bomb','goal','fake'].forEach(id=>{
+  ['inspect','empty','ice','wall','bomb','goal','fake'].forEach(id=>{
     let btn=document.getElementById('mode-'+id);
-    if(btn){btn.className='mode-btn m-'+id+(id===m?' active':'');}
+    if(!btn) return;
+    if(id==='inspect') btn.className='mode-btn'+(m==='inspect'?' active':'');
+    else btn.className='mode-btn m-'+id+(id===m?' active':'');
   });
 }
 
@@ -672,7 +828,8 @@ canvas.addEventListener('click',function(e){
     });
     document.getElementById('q-detail').innerHTML=html;
   } else {document.getElementById('q-detail').innerHTML='<span style="color:var(--ink3)">Wand</span>';}
-  // Edit
+  // Edit — skip if in inspect mode
+  if(editMode==='inspect') return;
   if(cr===0&&cc===0&&editMode!=='empty') return;
   let tm={empty:EMPTY,ice:ICE,wall:WALL,bomb:BOMB,goal:GOAL,fake:FAKE};
   map[cr][cc]=tm[editMode];draw();
@@ -684,9 +841,114 @@ canvas.addEventListener('mousemove',function(e){
   let sx=canvas.width/rect.width,sy=canvas.height/rect.height;
   let cc=Math.floor((e.clientX-rect.left)*sx/CELL),cr=Math.floor((e.clientY-rect.top)*sy/CELL);
   if(cc<0||cc>=COLS||cr<0||cr>=ROWS||cr===0&&cc===0) return;
+  if(editMode==='inspect') return;
   let tm={empty:EMPTY,ice:ICE,wall:WALL,bomb:BOMB,goal:GOAL,fake:FAKE};
   map[cr][cc]=tm[editMode];draw();
 });
+
+function loadScenario(sc){
+  if(running){running=false;document.getElementById('run-btn').textContent='▶ Start';document.getElementById('run-btn').className='btn accent';}
+  map=[];
+  for(let r=0;r<ROWS;r++){map[r]=[];for(let c=0;c<COLS;c++)map[r][c]=EMPTY;}
+
+  let hint='';
+
+  if(sc==='sarsa'){
+    fakeTerminal=true;
+    // Classic Cliff Walk (Sutton & Barto):
+    // Start bottom-left (7,0), Goal bottom-right (7,7)
+    // Bombs fill the entire bottom row cols 1-6 — the "cliff"
+    // Only two paths: along bottom (risky, shorter) or row 6 (safe, longer)
+    // No distractions — pure cliff walk
+    map[7][7]=GOAL;
+    [1,2,3,4,5,6].forEach(c=>map[7][c]=BOMB);
+    // Wall forcing agent to navigate (optional narrow corridor removed for clarity)
+    agentR=7;agentC=0;startR=7;startC=0;
+    // Start on Q-Learning so user sees it hug the cliff first
+    learner='q_learning';
+    document.getElementById('learner-sel').value='q_learning';
+    document.getElementById('learner-desc').textContent=LEARNER_DESCS['q_learning'];
+    strategy='eps_greedy';
+    document.getElementById('strategy-sel').value='eps_greedy';
+    document.getElementById('algo-desc').textContent=DESCS['eps_greedy'];
+    // High eps so SARSA's risk-aversion is really visible
+    params.eps=0.45; document.getElementById('sl-eps').value=0.45; document.getElementById('v-eps').textContent='0.45';
+    params.alpha=0.5; document.getElementById('sl-alpha').value=0.5; document.getElementById('v-alpha').textContent='0.50';
+    // Negative step reward makes the short cliff-path attractive
+    rewards.step=-1; document.getElementById('rew-step').value=-1;
+    rewards.goal=100; document.getElementById('rew-goal').value=100;
+    rewards.bomb=-20; document.getElementById('rew-bomb').value=-20;
+    params.maxSteps=200; document.getElementById('sl-maxsteps').value=200; document.getElementById('v-maxsteps').textContent='200';
+    params.gamma=0.99; document.getElementById('sl-gamma').value=0.99; document.getElementById('v-gamma').textContent='0.99';
+    viewMode='policy'; document.getElementById('view-sel').value='policy';
+    hint='Q-Learning läuft direkt am Abgrund entlang (Reihe 7, optimaler Weg trotz Bomben). ' +
+         'Nach ~500 Ep.: Q Reset → Algorithmus auf SARSA wechseln → neu starten. ' +
+         'SARSA weicht auf Reihe 6 aus — sicherer, aber einen Schritt länger.';
+
+  } else if(sc==='double_q'){
+    // Maximization bias demo — clean terminal setup:
+    // Fakes ARE terminal (episode ends), but their reward (5) is close to goal (10).
+    // With noisy Q-init, Q-Learning systematically picks the highest noise sample via max →
+    // overestimates fake cells early. Double Q uses opposite table to evaluate → stays realistic.
+    // Key: run EXACTLY 200 ep each, compare Fake Q-Max values directly.
+    fakeTerminal=true;
+    map[0][7]=GOAL;
+    // 4 fakes blocking shortcuts — agent encounters them early and often
+    [[2,1],[2,4],[4,3],[5,2]].forEach(([r,c])=>map[r][c]=FAKE);
+    [[1,5],[3,6],[6,4]].forEach(([r,c])=>map[r][c]=BOMB);
+    [[4,0],[4,1]].forEach(([r,c])=>map[r][c]=WALL);
+    agentR=7;agentC=0;startR=7;startC=0;
+    learner='q_learning';
+    document.getElementById('learner-sel').value='q_learning';
+    document.getElementById('learner-desc').textContent=LEARNER_DESCS['q_learning'];
+    strategy='eps_greedy';
+    document.getElementById('strategy-sel').value='eps_greedy';
+    document.getElementById('algo-desc').textContent=DESCS['eps_greedy'];
+    params.eps=0.3; document.getElementById('sl-eps').value=0.3; document.getElementById('v-eps').textContent='0.30';
+    params.alpha=0.2; document.getElementById('sl-alpha').value=0.2; document.getElementById('v-alpha').textContent='0.20';
+    params.gamma=0.95; document.getElementById('sl-gamma').value=0.95; document.getElementById('v-gamma').textContent='0.95';
+    rewards.fake=5; document.getElementById('rew-fake').value=5;
+    rewards.goal=10; document.getElementById('rew-goal').value=10;
+    rewards.step=-0.1; document.getElementById('rew-step').value=-0.1;
+    rewards.bomb=-10; document.getElementById('rew-bomb').value=-10;
+    params.maxSteps=100; document.getElementById('sl-maxsteps').value=100; document.getElementById('v-maxsteps').textContent='100';
+    // Pre-set N=200 for easy comparison
+    document.getElementById('n-ep-input').value=200;
+    viewMode='q_max'; document.getElementById('view-sel').value='q_max';
+    hint='Vergleich in 3 Schritten: ' +
+         '① "200 N Episoden" klicken (Q-Learning) → Fake-Zelle (◆) anklicken → Q-Max notieren (erwartet: >5, oft 6–8). ' +
+         '② Q Reset → Algorithmus auf Double Q wechseln → nochmal "200 N Episoden". ' +
+         '③ Gleiche Fake-Zelle: Q-Max bleibt näher an 5. Q-Learning überschätzt systematisch, Double Q nicht.';
+
+  } else {
+    fakeTerminal=true;
+    // Baseline Q-Learning: default map
+    [[2,2],[2,3],[3,2],[5,5],[5,6],[6,5]].forEach(([r,c])=>map[r][c]=ICE);
+    [[1,4],[4,1],[6,3]].forEach(([r,c])=>map[r][c]=BOMB);
+    [[2,5],[4,6]].forEach(([r,c])=>map[r][c]=WALL);
+    [[3,5],[5,2]].forEach(([r,c])=>map[r][c]=FAKE);
+    map[7][7]=GOAL;
+    agentR=0;agentC=0;startR=0;startC=0;
+    learner='q_learning';
+    document.getElementById('learner-sel').value='q_learning';
+    document.getElementById('learner-desc').textContent=LEARNER_DESCS['q_learning'];
+    strategy='eps_greedy';
+    document.getElementById('strategy-sel').value='eps_greedy';
+    document.getElementById('algo-desc').textContent=DESCS['eps_greedy'];
+    params.eps=0.3; document.getElementById('sl-eps').value=0.3; document.getElementById('v-eps').textContent='0.30';
+    params.alpha=0.1; document.getElementById('sl-alpha').value=0.1; document.getElementById('v-alpha').textContent='0.10';
+    viewMode='q_arrows'; document.getElementById('view-sel').value='q_arrows';
+    hint='Standardkarte mit Q-Learning. Nach ~300 Ep. zeigen die Pfeile eine stabile Policy. ' +
+         'Vergleichsreferenz: Value Iteration berechnet das optimale Ergebnis direkt.';
+  }
+
+  let hintEl=document.getElementById('sc-hint');
+  hintEl.textContent=hint;hintEl.style.display='block';
+  document.getElementById('s-learner').textContent=LEARNER_NAMES[learner];
+
+  resetQ();
+  log('Szenario geladen: '+sc,'');
+}
 
 initMap();draw();
 </script>
