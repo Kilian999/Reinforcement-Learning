@@ -117,16 +117,60 @@ A2C (−368) fail due to high gradient variance over long episodes.
 
 ## Part (b) — Evaluation Metrics: Tabular vs. Deep RL
 
-| Criterion | Tabular RL | Deep RL (this study) |
-|-----------|------------|----------------------|
-| Optimal reference | Known exactly (Q*) | Unknown — empirical max only |
-| Convergence proof | Yes (Robbins-Monro) | Rarely (deadly triad) |
-| Primary metric | `‖Q_n − Q*‖_∞` | Mean episode return |
-| Stability | High (exact Bellman updates) | Low (hyperparameter-sensitive) |
-| Generalisation | None | Via neural function approximation |
+### What changes compared to the tabular setting
 
-Metrics used in this study (following Agarwal et al. 2021):
-- Performance score with absolute theoretical bounds per environment
-- Stability as std over seeds
-- AUC of the normalised learning curve
-- Separate aggregation for discrete and continuous environments
+In the tabular exercises (Q-learning, SARSA on GridWorld), the optimal
+Q-function Q* could be computed exactly via Value Iteration.  This allowed
+measuring convergence directly as `‖Q_n − Q*‖_∞` — the distance between the
+current estimate and the true optimum.  The algorithm was considered solved
+once this error fell below a threshold.
+
+In the deep / continuous-state setting of this exercise, no such reference
+exists.  CartPole has a theoretical maximum of 500, but whether any algorithm
+actually *reaches* it depends on training time and random seeds.  For
+MountainCar the reward is so sparse that most algorithms score −200 without
+ever seeing a positive signal — comparing to an optimum makes no sense here.
+The metrics therefore shift from absolute error to empirical comparisons.
+
+### Metrics used in this study and why
+
+**Mean final return (last 20 % of episodes)**  
+The most direct metric: what does the algorithm achieve after training?
+Used for the bar charts in the per-environment figures.  Problem: incomparable
+across environments because reward scales differ (CartPole 0–500 vs.
+Pendulum −3254–0).
+
+**Performance score `(return − worst) / (best − worst)`**  
+Normalises to [0, 1] using fixed theoretical bounds per environment (e.g.
+−3254 and 0 for Pendulum), making results comparable across environments.
+A score of 1 means the algorithm reached the theoretically best possible
+return; 0 means it performed as badly as the worst case.  Used in `metrics.png`.
+
+**Std over seeds**  
+In the tabular setting, the same algorithm always converges to the same Q*
+(given Robbins-Monro step sizes), so stability is not a meaningful concern.
+With neural networks the result depends heavily on random initialisation,
+and a single run is unreliable.  The std over 3 seeds therefore replaces the
+convergence guarantee: low std means the algorithm is robust, high std means
+success is largely a matter of luck.  REINFORCE shows std ±150 on CartPole
+while PPO shows ±22 — the same difference that convergence proofs capture
+analytically in the tabular case.
+
+**AUC (area under the normalised learning curve)**  
+The learning curve plots (episode return over timesteps) replace the
+convergence-rate plots from the tabular setting.  The AUC summarises the
+entire curve in one number: an algorithm that learns quickly *and* reaches a
+high final return gets a high AUC, whereas an algorithm that plateaus early
+at a poor level gets a low AUC even if it converged fast.  This is important
+because a naive efficiency metric ("steps to 80 % of own final return")
+incorrectly rewards algorithms like REINFORCE that settle quickly on a bad
+solution.
+
+**Separate aggregation for discrete and continuous environments**  
+In the tabular setting all algorithms ran on the same GridWorld, so
+aggregating results was trivial.  Here, off-policy algorithms (DDPG, SAC,
+TD3, TQC) require continuous action spaces and therefore only run on 2 of
+the 5 environments.  Averaging their scores together with on-policy
+algorithms that ran on all 5 would bias the comparison.  Splitting the
+metrics plot into a discrete row and a continuous row ensures that each
+aggregation only covers algorithms with the same environment coverage.
