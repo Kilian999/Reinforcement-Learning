@@ -15,7 +15,7 @@ environments using 3 random seeds each.  Results and plots are saved to `results
 
 ### Own implementations
 
-**REINFORCE** — standard policy gradient (Williams 1992), Policy Gradient Theorem:
+**REINFORCE** - standard policy gradient, Policy Gradient Theorem:
 
 ```
 ∇J(θ) = E [ Σ_t  ∇_θ log π_θ(A_t | S_t) · R_t^T ]
@@ -23,7 +23,7 @@ environments using 3 random seeds each.  Results and plots are saved to `results
 
 One gradient update per episode.  Returns normalised before each update.
 
-**Mini-batch REINFORCE** — same as REINFORCE but averages the gradient over K=8 episodes per update, reducing variance.
+**Mini-batch REINFORCE** - same as REINFORCE but averages the gradient over K=8 episodes per update, reducing variance.
 
 Both use a 2-layer MLP (64 units, Tanh) with a Categorical distribution (discrete) or Normal distribution with learnable log-std (continuous).
 
@@ -80,13 +80,13 @@ Each environment gets a figure with learning curves (mean ± std over seeds) and
 final performance bar chart.  `overview.png` shows all 5 environments side by side.
 
 `metrics.png` is a **2×3 grid** split by action space type (discrete top, continuous
-bottom) to avoid coverage bias — off-policy algorithms only run on continuous environments.
+bottom) to avoid coverage bias - off-policy algorithms only run on continuous environments.
 
 | Panel | Metric |
 |-------|--------|
 | Left | Performance score: `(return − worst) / (best − worst)`, theoretical bounds per env |
 | Middle | Stability: raw std of final return over seeds (lower = better) |
-| Right | AUC: area under the normalised learning curve — combines speed and quality |
+| Right | AUC: area under the normalised learning curve - combines speed and quality |
 
 AUC is used instead of "steps to 80 % of final return" because the naive metric
 rewards algorithms that quickly converge to a *bad* final performance.
@@ -115,13 +115,13 @@ A2C (−368) fail due to high gradient variance over long episodes.
 
 ---
 
-## Part (b) — Evaluation Metrics: Tabular vs. Deep RL
+## Part (b) - Evaluation Metrics: Tabular vs. Deep RL
 
 ### What changes compared to the tabular setting
 
 In the tabular exercises (Q-learning, SARSA on GridWorld), the optimal
 Q-function Q* could be computed exactly via Value Iteration.  This allowed
-measuring convergence directly as `‖Q_n − Q*‖_∞` — the distance between the
+measuring convergence directly as `‖Q_n − Q*‖_∞` - the distance between the
 current estimate and the true optimum.  The algorithm was considered solved
 once this error fell below a threshold.
 
@@ -129,7 +129,7 @@ In the deep / continuous-state setting of this exercise, no such reference
 exists.  CartPole has a theoretical maximum of 500, but whether any algorithm
 actually *reaches* it depends on training time and random seeds.  For
 MountainCar the reward is so sparse that most algorithms score −200 without
-ever seeing a positive signal — comparing to an optimum makes no sense here.
+ever seeing a positive signal - comparing to an optimum makes no sense here.
 The metrics therefore shift from absolute error to empirical comparisons.
 
 ### Metrics used in this study and why
@@ -153,8 +153,7 @@ With neural networks the result depends heavily on random initialisation,
 and a single run is unreliable.  The std over 3 seeds therefore replaces the
 convergence guarantee: low std means the algorithm is robust, high std means
 success is largely a matter of luck.  REINFORCE shows std ±150 on CartPole
-while PPO shows ±22 — the same difference that convergence proofs capture
-analytically in the tabular case.
+while PPO shows ±22.
 
 **AUC (area under the normalised learning curve)**  
 The learning curve plots (episode return over timesteps) replace the
