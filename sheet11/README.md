@@ -15,7 +15,7 @@ environments using 3 random seeds each.  Results and plots are saved to `results
 
 ### Own implementations
 
-**REINFORCE** — standard policy gradient (Williams 1992), Policy Gradient Theorem (Theorem 5.1.3):
+**REINFORCE** — standard policy gradient (Williams 1992), Policy Gradient Theorem:
 
 ```
 ∇J(θ) = E [ Σ_t  ∇_θ log π_θ(A_t | S_t) · R_t^T ]
